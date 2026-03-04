@@ -57,6 +57,7 @@
   text-align: center;
   line-height: var(--title-line-height, 29px);
   margin: 0;
+  margin-bottom: var(--body-line-height, 29px);
 }
 
 /* 一级标题段落: 基础样式（含首句拆分时的段落容器） */
