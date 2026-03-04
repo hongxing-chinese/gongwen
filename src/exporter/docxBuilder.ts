@@ -94,8 +94,14 @@ function splitBoldFirstSentence(content: string, runStyle: Partial<IRunOptions>)
 }
 
 /** 将单个 AST 节点转换为 docx Paragraph */
-function nodeToParagraph(node: DocumentNode, config: DocumentConfig, spacingBefore = 0): Paragraph {
-  let paragraphStyle = getParagraphStyle(node.type, config)
+function nodeToParagraph(
+  node: DocumentNode,
+  config: DocumentConfig,
+  spacingBefore = 0,
+  signatureContent?: string,
+  dateContent?: string
+): Paragraph {
+  let paragraphStyle = getParagraphStyle(node.type, config, signatureContent, dateContent)
   const runStyle = getRunStyle(node.type, config)
 
   // 外部传入的额外 spacing.before（如版头后标题空二行）
@@ -258,8 +264,34 @@ export function buildDocument(ast: GongwenAST, config: DocumentConfig): Document
     children.push(nodeToParagraph(ast.title, config, titleSpacingBefore))
   }
 
-  for (const node of ast.body) {
-    children.push(nodeToParagraph(node, config))
+  for (let i = 0; i < ast.body.length; i++) {
+    const node = ast.body[i]
+    
+    // 发文机关署名前插入 2 个空行
+    if (node.type === NodeType.SIGNATURE) {
+      const bodyLineSpacing = ptToTwip(config.body.lineSpacing)
+      const bodyFont = {
+        ascii: 'Times New Roman',
+        eastAsia: config.body.fontFamily,
+        hAnsi: config.body.fontFamily,
+        cs: 'Times New Roman',
+      }
+      const bodyFontSize = config.body.fontSize * 2
+      
+      for (let j = 0; j < 2; j++) {
+        children.push(new Paragraph({
+          spacing: { line: bodyLineSpacing, lineRule: LineRuleType.EXACT, before: 0, after: 0 },
+          children: [new TextRun({ font: bodyFont, size: bodyFontSize, text: '' })],
+        }))
+      }
+    }
+    
+    // 对于 SIGNATURE 节点，查找下一个节点是否为 DATE
+    if (node.type === NodeType.SIGNATURE && i + 1 < ast.body.length && ast.body[i + 1].type === NodeType.DATE) {
+      children.push(nodeToParagraph(node, config, 0, node.content, ast.body[i + 1].content))
+    } else {
+      children.push(nodeToParagraph(node, config))
+    }
   }
 
   // ---- 版记浮动表格（锚定页面底部版心下边缘） ----

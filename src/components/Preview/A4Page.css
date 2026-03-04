@@ -170,7 +170,10 @@
   margin: var(--body-line-height, 29px) 0 0 0;
 }
 
-/* 成文日期: 右对齐 右空四字 仿宋 */
+/* 成文日期: 右对齐 仿宋
+ * 右空字数由 JS 动态设置（加盖印章右空四字，不加盖印章右空二字）
+ * GB/T 9704: 7.3.5.1 加盖印章右空四字，7.3.5.2 不加盖印章右空二字
+ */
 .a4-date {
   font-family: var(--body-font, 'FangSong_GB2312'), 'FangSong', 'STFangsong', serif;
   font-size: var(--body-size, 16px);
@@ -178,6 +181,26 @@
   text-align: right;
   padding-right: 4em;
   line-height: var(--body-line-height, 29px);
+  margin: 0;
+}
+
+/* 发文机关署名: 右对齐 仿宋
+ * 以成文日期为基准居中，右缩进由 JS 动态计算
+ * 公式：基础右空字数 + (成文日期宽度 - 署名宽度) / 2
+ */
+.a4-signature {
+  font-family: var(--body-font, 'FangSong_GB2312'), 'FangSong', 'STFangsong', serif;
+  font-size: var(--body-size, 16px);
+  text-indent: 0;
+  text-align: right;
+  line-height: var(--body-line-height, 29px);
+  margin: 0;
+}
+
+/* 空行：用于发文机关署名前的段前间距 */
+.a4-empty-line {
+  line-height: var(--body-line-height, 29px);
+  height: var(--body-line-height, 29px);
   margin: 0;
 }
 

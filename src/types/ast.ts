@@ -16,6 +16,8 @@ export enum NodeType {
   ADDRESSEE = 'ADDRESSEE',
   /** 附件说明（"附件："开头） */
   ATTACHMENT = 'ATTACHMENT',
+  /** 发文机关署名（成文日期正上方，以成文日期为基准居中） */
+  SIGNATURE = 'SIGNATURE',
   /** 成文日期（"XXXX年X月X日"） */
   DATE = 'DATE',
 }

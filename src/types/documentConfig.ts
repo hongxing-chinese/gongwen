@@ -47,6 +47,12 @@ export interface SpecialOptionsConfig {
   boldFirstSentence: boolean
   showPageNumber: boolean
   pageNumberFont: string
+  /**
+   * 是否加盖印章
+   * - true: 成文日期右空四字 (GB/T 9704 7.3.5.1 加盖印章的公文)
+   * - false: 成文日期右空二字 (GB/T 9704 7.3.5.2 不加盖印章的公文)
+   */
+  hasStamp: boolean
 }
 
 /** 高级设置 — 单个元素配置 */
@@ -138,6 +144,7 @@ export const DEFAULT_CONFIG: DocumentConfig = {
     boldFirstSentence: false,
     showPageNumber: true,
     pageNumberFont: '宋体',
+    hasStamp: false,
   },
   advanced: {
     addressee: { fontFamily: '仿宋_GB2312', asciiFontFamily: 'Times New Roman', fontSize: 16 },
