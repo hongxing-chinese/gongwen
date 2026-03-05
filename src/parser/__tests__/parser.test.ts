@@ -287,8 +287,10 @@ describe('附件说明解析', () => {
       const ast = parseGongwen(text)
 
       const node = ast.body[0] as AttachmentNode
-      expect(node.items).toHaveLength(2)
-      // 同行的剩余内容 "4.方案D" 作为附件说明的一部分，不单独解析
+      // 同行异常回退为单附件，保留原始文本避免丢字
+      expect(node.isMultiple).toBe(false)
+      expect(node.items).toHaveLength(1)
+      expect(node.items[0].name).toBe('1.方案A 2.方案B 4.方案D')
       expect(ast.body).toHaveLength(1)
     })
 
@@ -305,6 +307,23 @@ describe('附件说明解析', () => {
       expect(node.items).toHaveLength(2)
       // 分行的 "4.方案D" 应该被解析为三级标题
       expect(ast.body[1].type).toBe(NodeType.HEADING_3)
+    })
+
+    it('后续行异常时不吞掉原文（异常行继续由主循环解析）', () => {
+      const text = [
+        '标题',
+        '',
+        '附件：1.方案A',
+        '2.方案B 4.方案D',
+      ].join('\n')
+      const ast = parseGongwen(text)
+
+      const node = ast.body[0] as AttachmentNode
+      expect(node.isMultiple).toBe(true)
+      expect(node.items).toHaveLength(1)
+      expect(node.items[0]).toEqual({ index: 1, name: '方案A' })
+      expect(ast.body[1].type).toBe(NodeType.HEADING_3)
+      expect(ast.body[1].content).toBe('2.方案B 4.方案D')
     })
 
     it('支持不同点号格式', () => {
@@ -328,5 +347,50 @@ describe('附件说明解析', () => {
       expect(ast.body[0].type).toBe(NodeType.ATTACHMENT)
       expect(ast.body[1].type).toBe(NodeType.DATE)
     })
+  })
+})
+
+// ---- 发文机关署名识别测试 ----
+describe('发文机关署名识别', () => {
+  it('末尾日期前的机关名称识别为 SIGNATURE', () => {
+    const text = [
+      '标题',
+      '',
+      '国务院办公厅',
+      '2025年10月21日',
+    ].join('\n')
+    const ast = parseGongwen(text)
+
+    expect(ast.body).toHaveLength(2)
+    expect(ast.body[0].type).toBe(NodeType.SIGNATURE)
+    expect(ast.body[1].type).toBe(NodeType.DATE)
+  })
+
+  it('日期非末尾时不识别 SIGNATURE', () => {
+    const text = [
+      '标题',
+      '',
+      '国务院办公厅',
+      '2025年10月21日',
+      '一、后续说明',
+    ].join('\n')
+    const ast = parseGongwen(text)
+
+    expect(ast.body[0].type).toBe(NodeType.PARAGRAPH)
+    expect(ast.body[1].type).toBe(NodeType.DATE)
+    expect(ast.body[2].type).toBe(NodeType.HEADING_1)
+  })
+
+  it('普通短句不应误识别为 SIGNATURE', () => {
+    const text = [
+      '标题',
+      '',
+      '请认真执行',
+      '2025年10月21日',
+    ].join('\n')
+    const ast = parseGongwen(text)
+
+    expect(ast.body[0].type).toBe(NodeType.PARAGRAPH)
+    expect(ast.body[1].type).toBe(NodeType.DATE)
   })
 })

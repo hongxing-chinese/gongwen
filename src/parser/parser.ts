@@ -4,6 +4,25 @@ import { detectNodeType, HEADING_1_RE, ATTACHMENT_RE, extractAttachmentItemsFrom
 
 /** 不应被识别为发文机关署名的结尾标点 */
 const SIGNATURE_EXCLUDE_ENDINGS = ['。', '：', ':', '；', ';', '！', '!', '？', '?', '，', ',']
+/** 机关署名常见关键词（用于降低正文误判） */
+const SIGNATURE_ORG_HINTS = [
+  '人民政府',
+  '政府',
+  '委员会',
+  '办公厅',
+  '办公室',
+  '党委',
+  '党组',
+  '部',
+  '厅',
+  '局',
+  '委',
+  '院',
+  '会',
+  '集团',
+  '公司',
+  '中央',
+]
 
 /**
  * 检查节点是否可能为发文机关署名
@@ -14,6 +33,22 @@ function isPossibleSignature(node: DocumentNode | undefined): boolean {
   const content = node.content.trim()
   if (content.length === 0 || content.length > 15) return false
   return !SIGNATURE_EXCLUDE_ENDINGS.some(ending => content.endsWith(ending))
+}
+
+/** 机关名称关键词检查（避免把普通短句识别为署名） */
+function hasSignatureOrgHint(text: string): boolean {
+  return SIGNATURE_ORG_HINTS.some((hint) => text.includes(hint))
+}
+
+/** 构造单附件节点（保留原始文本，避免信息丢失） */
+function buildSingleAttachmentNode(line: string, contentAfterColon: string, currentIndex: number): AttachmentNode {
+  return {
+    type: NodeType.ATTACHMENT,
+    content: line,
+    lineNumber: currentIndex + 1,
+    isMultiple: false,
+    items: [{ index: 0, name: contentAfterColon }],
+  }
 }
 
 /**
@@ -40,13 +75,7 @@ function parseAttachment(
   if (!firstItemMatch || firstItemMatch[1] !== '1') {
     // 单附件模式：冒号后不是 "1." 开头
     return {
-      node: {
-        type: NodeType.ATTACHMENT,
-        content: line,
-        lineNumber: currentIndex + 1,
-        isMultiple: false,
-        items: [{ index: 0, name: contentAfterColon }],
-      },
+      node: buildSingleAttachmentNode(line, contentAfterColon, currentIndex),
       nextIndex: currentIndex + 1,
     }
   }
@@ -65,13 +94,48 @@ function parseAttachment(
       expectedIndex
     )
 
+    // 当前行存在“部分可识别 + 剩余文本”时，不应吞掉剩余文本
+    // 首行异常回退为单附件；后续行异常则不消费该行，交由主循环继续解析
+    if (remaining.trim() !== '') {
+      if (lastConsumedIndex === currentIndex) {
+        return {
+          node: buildSingleAttachmentNode(line, contentAfterColon, currentIndex),
+          nextIndex: currentIndex + 1,
+        }
+      }
+      return {
+        node: {
+          type: NodeType.ATTACHMENT,
+          content: line,
+          lineNumber: currentIndex + 1,
+          isMultiple: true,
+          items,
+        },
+        nextIndex: lastConsumedIndex,
+      }
+    }
+
+    if (foundItems.length === 0) {
+      if (lastConsumedIndex === currentIndex) {
+        return {
+          node: buildSingleAttachmentNode(line, contentAfterColon, currentIndex),
+          nextIndex: currentIndex + 1,
+        }
+      }
+      return {
+        node: {
+          type: NodeType.ATTACHMENT,
+          content: line,
+          lineNumber: currentIndex + 1,
+          isMultiple: true,
+          items,
+        },
+        nextIndex: lastConsumedIndex,
+      }
+    }
+
     items.push(...foundItems)
     expectedIndex += foundItems.length
-
-    // 如果剩余文本不为空，说明序号不连续，停止解析
-    if (remaining.trim() !== '') {
-      break
-    }
 
     // 当前行的附件项已提取完毕，检查下一行是否有后续附件
     const nextLineIndex = lastConsumedIndex + 1
@@ -84,7 +148,7 @@ function parseAttachment(
       }
       // 检查下一行是否以期望的序号开头
       const nextItemMatch = nextLine.match(/^(\d+)[.．．.]/)
-      if (nextItemMatch && parseInt(nextItemMatch[1]) === expectedIndex) {
+      if (nextItemMatch && Number(nextItemMatch[1]) === expectedIndex) {
         remainingText = nextLine
         lastConsumedIndex = nextLineIndex
         continue
@@ -112,7 +176,8 @@ function parseAttachment(
  * 1. 跳过空行
  * 2. 第一个非空行视为公文标题（DOCUMENT_TITLE）
  * 3. 后续行通过正则检测类型
- * 4. 解析完成后识别发文机关署名（DATE 前一个节点，满足条件则改为 SIGNATURE）
+ * 4. 解析完成后识别发文机关署名：
+ *    仅当 DATE 位于末尾，且 DATE 前一个段落满足“短句 + 机关关键词”时改为 SIGNATURE
  */
 export function parseGongwen(text: string): GongwenAST {
   const lines = text.split('\n')
@@ -171,9 +236,10 @@ export function parseGongwen(text: string): GongwenAST {
     i++
   }
 
-  // 识别发文机关署名：遍历 body，找到 DATE 节点，检查前一个节点
+  // 识别发文机关署名：仅处理末尾成文日期，降低误判
   for (let j = 1; j < body.length; j++) {
-    if (body[j].type === NodeType.DATE && isPossibleSignature(body[j - 1])) {
+    if (body[j].type !== NodeType.DATE || j !== body.length - 1) continue
+    if (isPossibleSignature(body[j - 1]) && hasSignatureOrgHint(body[j - 1].content)) {
       body[j - 1] = { ...body[j - 1], type: NodeType.SIGNATURE }
     }
   }

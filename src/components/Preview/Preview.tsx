@@ -1,10 +1,10 @@
-import { useRef, useMemo, type CSSProperties } from 'react'
+import React, { useRef, useMemo, type CSSProperties } from 'react'
 import { NodeType } from '../../types/ast'
-import type { GongwenAST, DocumentNode } from '../../types/ast'
+import type { GongwenAST, DocumentNode, AttachmentNode } from '../../types/ast'
 import { useDocumentConfig } from '../../contexts/DocumentConfigContext'
 import { cmToPagePercent, CHARS_PER_LINE } from '../../types/documentConfig'
 import { usePagination } from '../../hooks/usePagination'
-import { A4Page, NODE_CLASS_MAP, renderHeading1, renderHeading2, renderHeading3, renderHeading4, renderBoldFirstSentence, calculateSignatureIndentEm } from './A4Page'
+import { A4Page, NODE_CLASS_MAP, renderHeading1, renderHeading2, renderHeading3, renderHeading4, renderBoldFirstSentence, renderAttachment, calculateSignatureIndentEm } from './A4Page'
 import './A4Page.css'
 import './Preview.css'
 
@@ -103,29 +103,37 @@ export function Preview({ ast }: PreviewProps) {
                 }
               }
               
-              elements.push(
-                <p
-                  key={node.lineNumber}
-                  className={
-                    node.type === NodeType.HEADING_1 ? 'a4-h1'
-                    : node.type === NodeType.HEADING_2 ? 'a4-h2'
-                    : NODE_CLASS_MAP[node.type]
-                  }
-                  style={getNodeStyle(node, index, ast.body, config.specialOptions.hasStamp)}
-                >
-                  {node.type === NodeType.HEADING_1
-                    ? renderHeading1(node.content)
-                    : node.type === NodeType.HEADING_2
-                      ? renderHeading2(node.content)
-                      : node.type === NodeType.HEADING_3
-                        ? renderHeading3(node.content)
-                        : node.type === NodeType.HEADING_4
-                          ? renderHeading4(node.content)
-                          : (boldFirst && node.type === NodeType.PARAGRAPH)
-                            ? renderBoldFirstSentence(node.content)
-                            : node.content}
-                </p>
-              )
+              if (node.type === NodeType.ATTACHMENT) {
+                elements.push(
+                  <React.Fragment key={node.lineNumber}>
+                    {renderAttachment(node as AttachmentNode)}
+                  </React.Fragment>
+                )
+              } else {
+                elements.push(
+                  <p
+                    key={node.lineNumber}
+                    className={
+                      node.type === NodeType.HEADING_1 ? 'a4-h1'
+                      : node.type === NodeType.HEADING_2 ? 'a4-h2'
+                      : NODE_CLASS_MAP[node.type]
+                    }
+                    style={getNodeStyle(node, index, ast.body, config.specialOptions.hasStamp)}
+                  >
+                    {node.type === NodeType.HEADING_1
+                      ? renderHeading1(node.content)
+                      : node.type === NodeType.HEADING_2
+                        ? renderHeading2(node.content)
+                        : node.type === NodeType.HEADING_3
+                          ? renderHeading3(node.content)
+                          : node.type === NodeType.HEADING_4
+                            ? renderHeading4(node.content)
+                            : (boldFirst && node.type === NodeType.PARAGRAPH)
+                              ? renderBoldFirstSentence(node.content)
+                              : node.content}
+                  </p>
+                )
+              }
               
               return elements
             })}
