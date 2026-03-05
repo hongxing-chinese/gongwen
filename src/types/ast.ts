@@ -16,6 +16,8 @@ export enum NodeType {
   ADDRESSEE = 'ADDRESSEE',
   /** 附件说明（"附件："开头） */
   ATTACHMENT = 'ATTACHMENT',
+  /** 发文机关署名（成文日期正上方，以成文日期为基准居中） */
+  SIGNATURE = 'SIGNATURE',
   /** 成文日期（"XXXX年X月X日"） */
   DATE = 'DATE',
 }
@@ -26,6 +28,23 @@ export interface DocumentNode {
   content: string
   /** 原始文本中的行号（从 1 开始） */
   lineNumber: number
+}
+
+/** 附件项 */
+export interface AttachmentItem {
+  /** 附件序号（1, 2, 3...），单附件时为 0 */
+  index: number
+  /** 附件名称（不含序号和点号） */
+  name: string
+}
+
+/** 附件说明节点 */
+export interface AttachmentNode extends DocumentNode {
+  type: NodeType.ATTACHMENT
+  /** 是否为多附件模式 */
+  isMultiple: boolean
+  /** 附件列表（单附件时只有一项，index 为 0） */
+  items: AttachmentItem[]
 }
 
 /** 完整公文 AST */

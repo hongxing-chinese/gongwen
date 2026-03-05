@@ -414,6 +414,19 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   />
                 </div>
               )}
+              <CheckboxField
+                label="加盖印章（成文日期右空四字）"
+                checked={config.specialOptions.hasStamp}
+                onChange={(v) => patch({ specialOptions: { hasStamp: v } })}
+              />
+              <p className="settings-hint">
+                {config.specialOptions.hasStamp
+                  ? '加盖印章：成文日期右空四字，发文机关署名以成文日期为基准居中 (GB/T 9704 7.3.5.1)'
+                  : '不加盖印章：成文日期右空二字，发文机关署名以成文日期为基准居中 (GB/T 9704 7.3.5.2)'}
+              </p>
+              <p className="settings-hint">
+                发文机关署名自动识别：成文日期上一行、不超过15字、不以标点结尾的段落
+              </p>
             </div>
           </section>
 
