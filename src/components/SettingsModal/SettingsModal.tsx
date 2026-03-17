@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react'
+import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react'
 import { useDocumentConfig } from '../../contexts/DocumentConfigContext'
 import { useCustomFonts } from '../../hooks/useCustomFonts'
 import {
@@ -84,6 +84,203 @@ function NumberField({
   )
 }
 
+/** 可输入数值字段（支持建议值 + 基本校验） */
+function NumberInputField({
+  label,
+  value,
+  min,
+  max,
+  unit,
+  options,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  unit?: string
+  options: { label: string; value: number }[]
+  onChange: (val: number) => void
+}) {
+  const [draft, setDraft] = useState(String(value))
+  const [open, setOpen] = useState(false)
+  const [activeIdx, setActiveIdx] = useState(-1)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const mouseDownOnWrapRef = useRef(false)
+  const filterText = open ? draft.trim() : ''
+  const filteredOptions = filterText.length > 0
+    ? options.filter((opt) => opt.label.includes(filterText) || String(opt.value).includes(filterText))
+    : options
+  const noResults = filterText.length > 0 && filteredOptions.length === 0
+
+  useEffect(() => {
+    if (!open) setDraft(String(value))
+  }, [value, open])
+
+  useEffect(() => {
+    if (!open) return
+    setActiveIdx(-1)
+  }, [filterText, open])
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        commitAndClose()
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  })
+
+  function parseNumber(raw: string): number | null {
+    const trimmed = raw.trim()
+    if (!trimmed) return null
+    const num = Number(trimmed)
+    if (!Number.isFinite(num) || num < min || num > max) return null
+    return num
+  }
+
+  function commit(nextValue?: string) {
+    const num = parseNumber(nextValue ?? draft)
+    if (num === null) {
+      setDraft(String(value))
+      return
+    }
+    onChange(num)
+    setDraft(String(num))
+  }
+
+  function commitAndClose() {
+    commit()
+    setOpen(false)
+    setActiveIdx(-1)
+  }
+
+  function handleSelect(nextValue: number) {
+    onChange(nextValue)
+    setDraft(String(nextValue))
+    setOpen(false)
+    setActiveIdx(-1)
+    inputRef.current?.blur()
+  }
+
+  function handleWrapMouseDown() {
+    mouseDownOnWrapRef.current = true
+  }
+
+  function handleWrapClick() {
+    if (open) {
+      commitAndClose()
+    } else {
+      setOpen(true)
+      setActiveIdx(-1)
+      inputRef.current?.focus()
+    }
+  }
+
+  function handleFocus() {
+    if (mouseDownOnWrapRef.current) {
+      mouseDownOnWrapRef.current = false
+      return
+    }
+    if (!open) {
+      setOpen(true)
+      setActiveIdx(-1)
+    }
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (!open) {
+      if (e.key === 'ArrowDown' || e.key === 'Enter') {
+        e.preventDefault()
+        setOpen(true)
+      }
+      return
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setActiveIdx((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setActiveIdx((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1))
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (open && activeIdx >= 0 && activeIdx < filteredOptions.length) {
+          handleSelect(filteredOptions[activeIdx].value)
+        } else {
+          commitAndClose()
+          inputRef.current?.blur()
+        }
+        break
+      case 'Escape':
+        e.preventDefault()
+        setDraft(String(value))
+        setOpen(false)
+        setActiveIdx(-1)
+        inputRef.current?.blur()
+        break
+    }
+  }
+
+  return (
+    <label className="settings-field">
+      <span className="settings-field-label">{label}</span>
+      <div className="settings-number-wrap">
+        <div className="font-combo" ref={wrapRef} style={{ flex: 1 }}>
+          <div
+            className="font-combo-input-wrap"
+            onMouseDown={handleWrapMouseDown}
+            onClick={handleWrapClick}
+          >
+            <input
+              ref={inputRef}
+              className="settings-number font-combo-input"
+              type="text"
+              inputMode="decimal"
+              value={open ? draft : String(value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                const next = e.target.value
+                setDraft(next)
+                if (!open) setOpen(true)
+              }}
+              onFocus={handleFocus}
+              onBlur={() => commitAndClose()}
+              onKeyDown={handleKeyDown}
+            />
+            <span className={`font-combo-arrow ${open ? 'font-combo-arrow--open' : ''}`} />
+          </div>
+          {open && (
+            <div className="font-combo-dropdown">
+              {filteredOptions.map((opt, idx) => (
+                <div
+                  key={opt.value}
+                  className={`font-combo-item ${value === opt.value ? 'font-combo-item--selected' : ''} ${idx === activeIdx ? 'font-combo-item--active' : ''}`}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelect(opt.value) }}
+                  onMouseEnter={() => setActiveIdx(idx)}
+                >
+                  <span className="font-combo-item-text">{opt.label}</span>
+                </div>
+              ))}
+              {noResults && (
+                <div className="font-combo-hint">
+                  无匹配项，回车生效
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {unit && <span className="settings-unit">{unit}</span>}
+      </div>
+    </label>
+  )
+}
+
 /** 通用 checkbox */
 function CheckboxField({
   label,
@@ -138,6 +335,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   const patch = (p: DeepPartial<DocumentConfig>) => updateConfig(p)
+  const FONT_SIZE_MIN = 8
+  const FONT_SIZE_MAX = 72
+  const LINE_SPACING_MIN = 10
+  const LINE_SPACING_MAX = 120
 
   /** 通用字体选择属性（中文字体） */
   const fontFieldProps = {
@@ -280,17 +481,23 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 {...fontFieldProps}
                 onChange={(v) => patch({ title: { fontFamily: v } })}
               />
-              <SelectField
+              <NumberInputField
                 label="字号"
                 value={config.title.fontSize}
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
+                unit="pt"
                 options={FONT_SIZE_OPTIONS}
-                onChange={(v) => patch({ title: { fontSize: Number(v) } })}
+                onChange={(v) => patch({ title: { fontSize: v } })}
               />
-              <SelectField
+              <NumberInputField
                 label="行距"
                 value={config.title.lineSpacing}
+                min={LINE_SPACING_MIN}
+                max={LINE_SPACING_MAX}
+                unit="磅"
                 options={LINE_SPACING_OPTIONS}
-                onChange={(v) => patch({ title: { lineSpacing: Number(v) } })}
+                onChange={(v) => patch({ title: { lineSpacing: v } })}
               />
             </div>
           </section>
@@ -305,11 +512,14 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 {...fontFieldProps}
                 onChange={(v) => patch({ headings: { h1: { fontFamily: v } } })}
               />
-              <SelectField
+              <NumberInputField
                 label="一级标题字号"
                 value={config.headings.h1.fontSize}
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
+                unit="pt"
                 options={FONT_SIZE_OPTIONS}
-                onChange={(v) => patch({ headings: { h1: { fontSize: Number(v) } } })}
+                onChange={(v) => patch({ headings: { h1: { fontSize: v } } })}
               />
               <FontSelectField
                 label="二级标题字体"
@@ -317,11 +527,14 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 {...fontFieldProps}
                 onChange={(v) => patch({ headings: { h2: { fontFamily: v } } })}
               />
-              <SelectField
+              <NumberInputField
                 label="二级标题字号"
                 value={config.headings.h2.fontSize}
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
+                unit="pt"
                 options={FONT_SIZE_OPTIONS}
-                onChange={(v) => patch({ headings: { h2: { fontSize: Number(v) } } })}
+                onChange={(v) => patch({ headings: { h2: { fontSize: v } } })}
               />
             </div>
           </section>
@@ -336,17 +549,23 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 {...fontFieldProps}
                 onChange={(v) => patch({ body: { fontFamily: v } })}
               />
-              <SelectField
+              <NumberInputField
                 label="字号"
                 value={config.body.fontSize}
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
+                unit="pt"
                 options={FONT_SIZE_OPTIONS}
-                onChange={(v) => patch({ body: { fontSize: Number(v) } })}
+                onChange={(v) => patch({ body: { fontSize: v } })}
               />
-              <SelectField
+              <NumberInputField
                 label="行距"
                 value={config.body.lineSpacing}
+                min={LINE_SPACING_MIN}
+                max={LINE_SPACING_MAX}
+                unit="磅"
                 options={LINE_SPACING_OPTIONS}
-                onChange={(v) => patch({ body: { lineSpacing: Number(v) } })}
+                onChange={(v) => patch({ body: { lineSpacing: v } })}
               />
               <SelectField
                 label="首行缩进"
@@ -439,12 +658,15 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                           patch({ advanced: { [key]: { asciiFontFamily: v } } })
                         }
                       />
-                      <SelectField
+                      <NumberInputField
                         label="字号"
                         value={config.advanced[key].fontSize}
+                        min={FONT_SIZE_MIN}
+                        max={FONT_SIZE_MAX}
+                        unit="pt"
                         options={FONT_SIZE_OPTIONS}
                         onChange={(v) =>
-                          patch({ advanced: { [key]: { fontSize: Number(v) } } })
+                          patch({ advanced: { [key]: { fontSize: v } } })
                         }
                       />
                     </div>
