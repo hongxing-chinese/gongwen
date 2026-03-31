@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { useDocumentConfig } from '../../contexts/useDocumentConfig'
 import { useCustomFonts } from '../../hooks/useCustomFonts'
 import {
@@ -11,6 +11,7 @@ import {
   type DocumentConfig,
 } from '../../types/documentConfig'
 import { FontSelectField } from './FontSelectField'
+import { useComboBox } from './useComboBox'
 import './SettingsModal.css'
 
 interface SettingsModalProps {
@@ -103,16 +104,32 @@ function NumberInputField({
   onChange: (val: number) => void
 }) {
   const [draft, setDraft] = useState(String(value))
-  const [open, setOpen] = useState(false)
-  const [activeIdx, setActiveIdx] = useState(-1)
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const mouseDownOnWrapRef = useRef(false)
-  const filterText = open ? draft.trim() : ''
+  const filterText = draft.trim()
   const filteredOptions = filterText.length > 0
     ? options.filter((opt) => opt.label.includes(filterText) || String(opt.value).includes(filterText))
     : options
-  const noResults = filterText.length > 0 && filteredOptions.length === 0
+  const {
+    activeIdx,
+    closeDropdown,
+    handleFocus,
+    handleKeyDown,
+    handleWrapClick,
+    handleWrapMouseDown,
+    inputRef,
+    open,
+    setActiveIdx,
+    setOpen,
+    wrapRef,
+  } = useComboBox({
+    blurOnCommit: true,
+    blurOnEscape: true,
+    itemCount: filteredOptions.length,
+    onOpen: () => setDraft(String(value)),
+    onCommit: () => commit(),
+    onSelect: (index) => handleSelect(filteredOptions[index].value),
+    onEscape: () => setDraft(String(value)),
+  })
+  const noResults = open && filterText.length > 0 && filteredOptions.length === 0
 
   function parseNumber(raw: string): number | null {
     const trimmed = raw.trim()
@@ -134,91 +151,14 @@ function NumberInputField({
 
   function commitAndClose() {
     commit()
-    setOpen(false)
-    setActiveIdx(-1)
+    closeDropdown()
   }
 
   function handleSelect(nextValue: number) {
     onChange(nextValue)
     setDraft(String(nextValue))
-    setOpen(false)
-    setActiveIdx(-1)
+    closeDropdown()
     inputRef.current?.blur()
-  }
-
-  useEffect(() => {
-    if (!open) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        commitAndClose()
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  })
-
-  function handleWrapMouseDown() {
-    mouseDownOnWrapRef.current = true
-  }
-
-  function handleWrapClick() {
-    if (open) {
-      commitAndClose()
-    } else {
-      setDraft(String(value))
-      setOpen(true)
-      setActiveIdx(-1)
-      inputRef.current?.focus()
-    }
-  }
-
-  function handleFocus() {
-    if (mouseDownOnWrapRef.current) {
-      mouseDownOnWrapRef.current = false
-      return
-    }
-    if (!open) {
-      setDraft(String(value))
-      setOpen(true)
-      setActiveIdx(-1)
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (!open) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter') {
-        e.preventDefault()
-        setOpen(true)
-      }
-      return
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setActiveIdx((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0))
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        setActiveIdx((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1))
-        break
-      case 'Enter':
-        e.preventDefault()
-        if (open && activeIdx >= 0 && activeIdx < filteredOptions.length) {
-          handleSelect(filteredOptions[activeIdx].value)
-        } else {
-          commitAndClose()
-          inputRef.current?.blur()
-        }
-        break
-      case 'Escape':
-        e.preventDefault()
-        setDraft(String(value))
-        setOpen(false)
-        setActiveIdx(-1)
-        inputRef.current?.blur()
-        break
-    }
   }
 
   return (

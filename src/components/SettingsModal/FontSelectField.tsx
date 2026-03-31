@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useState, type ChangeEvent, type MouseEvent } from 'react'
+import { useComboBox } from './useComboBox'
 
 interface FontOption {
   label: string
@@ -30,13 +31,7 @@ export function FontSelectField({
   onAddCustomFont,
   onRemoveCustomFont,
 }: FontSelectFieldProps) {
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState('')
-  const [activeIdx, setActiveIdx] = useState(-1)
-  // 区分「键盘/输入触发」和「鼠标点击触发」，避免 focus+click 冲突
-  const mouseDownOnWrapRef = useRef(false)
 
   // 内置选项 value 集合
   const builtinValues = new Set(options.map((o) => o.value))
@@ -61,35 +56,40 @@ export function FontSelectField({
     ...filteredCustom.map((f) => ({ value: f, label: f, isCustom: true })),
   ]
 
-  function commitAndClose() {
+  function commitFilter() {
     const trimmed = filter.trim()
     if (trimmed && !builtinValues.has(trimmed) && trimmed !== value) {
       onAddCustomFont(trimmed)
       onChange(trimmed)
     }
-    setOpen(false)
     setFilter('')
-    setActiveIdx(-1)
   }
 
   function handleSelect(val: string) {
     onChange(val)
-    setOpen(false)
     setFilter('')
-    setActiveIdx(-1)
+    closeDropdown()
     inputRef.current?.blur()
   }
 
-  // 点击外部关闭
-  useEffect(() => {
-    if (!open) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        commitAndClose()
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+  const {
+    activeIdx,
+    closeDropdown,
+    handleFocus,
+    handleKeyDown,
+    handleWrapClick,
+    handleWrapMouseDown,
+    inputRef,
+    open,
+    setActiveIdx,
+    setOpen,
+    wrapRef,
+  } = useComboBox({
+    itemCount: flatItems.length,
+    onOpen: () => setFilter(''),
+    onCommit: commitFilter,
+    onSelect: (index) => handleSelect(flatItems[index].value),
+    onEscape: () => setFilter(''),
   })
 
   function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
@@ -98,73 +98,7 @@ export function FontSelectField({
     if (!open) setOpen(true)
   }
 
-  // mousedown 在 wrap 上记录标记，用于 onFocus 判断来源
-  function handleWrapMouseDown() {
-    mouseDownOnWrapRef.current = true
-  }
-
-  // 点击箭头或输入框区域：toggle
-  function handleWrapClick() {
-    if (open) {
-      commitAndClose()
-    } else {
-      setOpen(true)
-      setFilter('')
-      setActiveIdx(-1)
-      inputRef.current?.focus()
-    }
-  }
-
-  // onFocus 只在非鼠标点击（如 Tab 键）时打开
-  function handleFocus() {
-    if (mouseDownOnWrapRef.current) {
-      mouseDownOnWrapRef.current = false
-      return // 鼠标点击触发的 focus，由 handleWrapClick 处理
-    }
-    // Tab 键聚焦时打开
-    if (!open) {
-      setOpen(true)
-      setFilter('')
-      setActiveIdx(-1)
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (!open) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter') {
-        e.preventDefault()
-        setOpen(true)
-      }
-      return
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setActiveIdx((prev) => (prev < flatItems.length - 1 ? prev + 1 : 0))
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        setActiveIdx((prev) => (prev > 0 ? prev - 1 : flatItems.length - 1))
-        break
-      case 'Enter':
-        e.preventDefault()
-        if (activeIdx >= 0 && activeIdx < flatItems.length) {
-          handleSelect(flatItems[activeIdx].value)
-        } else {
-          commitAndClose()
-        }
-        break
-      case 'Escape':
-        e.preventDefault()
-        setOpen(false)
-        setFilter('')
-        setActiveIdx(-1)
-        break
-    }
-  }
-
-  function handleRemoveCustom(e: React.MouseEvent, fontName: string) {
+  function handleRemoveCustom(e: MouseEvent<HTMLButtonElement>, fontName: string) {
     e.stopPropagation()
     onRemoveCustomFont(fontName)
   }
