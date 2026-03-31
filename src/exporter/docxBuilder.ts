@@ -101,13 +101,17 @@ function splitBoldFirstSentence(content: string, runStyle: Partial<IRunOptions>)
  *                   2.xxx
  *                   3.xxx
  */
-function attachmentToParagraphs(node: AttachmentNode, config: DocumentConfig): Paragraph[] {
+function attachmentToParagraphs(
+  node: AttachmentNode,
+  config: DocumentConfig,
+  omitSpacingBefore = false
+): Paragraph[] {
   const paragraphs: Paragraph[] = []
   const runStyle = getAttachmentRunStyle(config)
 
   if (!node.isMultiple) {
     // 单附件模式
-    const paragraphStyle = getAttachmentParagraphStyle(false, false, config)
+    const paragraphStyle = getAttachmentParagraphStyle(false, false, config, omitSpacingBefore)
     paragraphs.push(
       new Paragraph({
         ...paragraphStyle,
@@ -121,7 +125,12 @@ function attachmentToParagraphs(node: AttachmentNode, config: DocumentConfig): P
     // 多附件模式
     node.items.forEach((item, index) => {
       const isFirst = index === 0
-      const paragraphStyle = getAttachmentParagraphStyle(true, isFirst, config)
+      const paragraphStyle = getAttachmentParagraphStyle(
+        true,
+        isFirst,
+        config,
+        omitSpacingBefore && isFirst,
+      )
 
       if (isFirst) {
         // 第一个附件：附件：1.xxx
@@ -324,6 +333,7 @@ export function buildDocument(ast: GongwenAST, config: DocumentConfig): Document
 
   for (let i = 0; i < ast.body.length; i++) {
     const node = ast.body[i]
+    const isFirstBodyNode = i === 0
     
     // 发文机关署名前插入 2 个空行
     if (node.type === NodeType.SIGNATURE) {
@@ -346,7 +356,11 @@ export function buildDocument(ast: GongwenAST, config: DocumentConfig): Document
     
     // 附件说明特殊处理
     if (node.type === NodeType.ATTACHMENT) {
-      const attachmentParagraphs = attachmentToParagraphs(node as AttachmentNode, config)
+      const attachmentParagraphs = attachmentToParagraphs(
+        node as AttachmentNode,
+        config,
+        isFirstBodyNode,
+      )
       children.push(...attachmentParagraphs)
       continue
     }

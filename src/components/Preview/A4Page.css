@@ -159,6 +159,12 @@
   margin: var(--body-line-height, 29px) 0 0 0;
 }
 
+/* 标题负责与紧随其后的主送机关/附件之间的留白，避免段后和段前重复控制 */
+.a4-title + .a4-addressee,
+.a4-title + .a4-attachment {
+  margin-top: 0;
+}
+
 /* 附件说明基础样式：左空二字，段前空一行 */
 .a4-attachment {
   font-family: var(--body-font, 'FangSong_GB2312'), 'FangSong', 'STFangsong', serif;

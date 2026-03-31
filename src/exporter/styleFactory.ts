@@ -121,7 +121,7 @@ export function getParagraphStyle(
     case NodeType.ADDRESSEE:
       return {
         alignment: AlignmentType.JUSTIFIED,
-        spacing: { ...BASE_SPACING, before: lineSpacingValue },
+        spacing: BASE_SPACING,
         indent: { left: 0 },
       }
 
@@ -236,16 +236,20 @@ export function getRunStyle(type: NodeType, config: DocumentConfig): Partial<IRu
 export function getAttachmentParagraphStyle(
   isMultiple: boolean,
   isFirst: boolean,
-  config: DocumentConfig
+  config: DocumentConfig,
+  omitSpacingBefore = false
 ): Partial<IParagraphOptions> {
   const lineSpacingValue = ptToTwip(config.body.lineSpacing)
   const charWidthTwips = calculateCharWidth(config)
+  const spacing = omitSpacingBefore
+    ? { line: lineSpacingValue, lineRule: LineRuleType.EXACT }
+    : { line: lineSpacingValue, lineRule: LineRuleType.EXACT, before: lineSpacingValue }
 
   if (!isMultiple) {
     // 单附件：左空 5 字符（2 + 3），悬挂缩进 3 字符（用于换行对齐）
     return {
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { line: lineSpacingValue, lineRule: LineRuleType.EXACT, before: lineSpacingValue },
+      spacing,
       indent: {
         left: 5 * charWidthTwips,
         hanging: 3 * charWidthTwips,
@@ -258,7 +262,7 @@ export function getAttachmentParagraphStyle(
     // 首行从 2 字符位置开始（5 - 3 = 2），换行后从 5 字符位置开始
     return {
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { line: lineSpacingValue, lineRule: LineRuleType.EXACT, before: lineSpacingValue },
+      spacing,
       indent: {
         left: 5 * charWidthTwips,
         hanging: 3 * charWidthTwips,
