@@ -57,7 +57,6 @@ export interface AdvancedElementConfig {
 
 /** 高级设置 */
 export interface AdvancedConfig {
-  addressee: AdvancedElementConfig
   h1: AdvancedElementConfig
   h2: AdvancedElementConfig
   h3: AdvancedElementConfig
@@ -133,7 +132,6 @@ export const DEFAULT_CONFIG: DocumentConfig = {
     hasStamp: false,
   },
   advanced: {
-    addressee: { fontFamily: '仿宋_GB2312', asciiFontFamily: 'Times New Roman', fontSize: 16 },
     h1: { fontFamily: '黑体', asciiFontFamily: 'Times New Roman', fontSize: 16 },
     h2: { fontFamily: '楷体_GB2312', asciiFontFamily: 'Times New Roman', fontSize: 16 },
     h3: { fontFamily: '仿宋_GB2312', asciiFontFamily: 'Times New Roman', fontSize: 16 },

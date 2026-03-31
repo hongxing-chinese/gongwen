@@ -203,17 +203,8 @@ export function getRunStyle(type: NodeType, config: DocumentConfig): Partial<IRu
         characterSpacing: charSpacing,
       }
 
-    case NodeType.ADDRESSEE:
-      return {
-        font: font(
-          config.advanced.addressee.fontFamily,
-          config.advanced.addressee.asciiFontFamily || config.advanced.addressee.fontFamily,
-        ),
-        size: config.advanced.addressee.fontSize * 2,
-        characterSpacing: charSpacing,
-      }
-
     case NodeType.HEADING_4:
+    case NodeType.ADDRESSEE:
     case NodeType.PARAGRAPH:
     case NodeType.DATE:
     case NodeType.SIGNATURE:

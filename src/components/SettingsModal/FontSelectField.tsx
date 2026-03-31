@@ -113,81 +113,84 @@ export function FontSelectField({
   return (
     <label className="settings-field" onClick={(e) => e.preventDefault()}>
       <span className="settings-field-label">{label}</span>
-      <div className="font-combo" ref={wrapRef}>
-        <div
-          className="font-combo-input-wrap"
-          onMouseDown={handleWrapMouseDown}
-          onClick={handleWrapClick}
-        >
-          <input
-            ref={inputRef}
-            className="settings-select font-combo-input"
-            type="text"
-            value={displayValue}
-            placeholder={value || '选择或输入字体'}
-            onChange={handleInputChange}
-            onFocus={handleFocus}
-            onKeyDown={handleKeyDown}
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <span className={`font-combo-arrow ${open ? 'font-combo-arrow--open' : ''}`} />
-        </div>
+      <div className="settings-control-row">
+        <div className="font-combo settings-field-main" ref={wrapRef}>
+          <div
+            className="font-combo-input-wrap"
+            onMouseDown={handleWrapMouseDown}
+            onClick={handleWrapClick}
+          >
+            <input
+              ref={inputRef}
+              className="settings-select font-combo-input"
+              type="text"
+              value={displayValue}
+              placeholder={value || '选择或输入字体'}
+              onChange={handleInputChange}
+              onFocus={handleFocus}
+              onKeyDown={handleKeyDown}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <span className={`font-combo-arrow ${open ? 'font-combo-arrow--open' : ''}`} />
+          </div>
 
-        {open && (
-          <div className="font-combo-dropdown">
-            {/* 自定义字体区 */}
-            {hasCustomSection && (
-              <>
-                <div className="font-combo-group-title">自定义字体</div>
-                {filteredCustom.map((f) => {
-                  const idx = flatItems.findIndex((item) => item.isCustom && item.value === f)
+          {open && (
+            <div className="font-combo-dropdown">
+              {/* 自定义字体区 */}
+              {hasCustomSection && (
+                <>
+                  <div className="font-combo-group-title">自定义字体</div>
+                  {filteredCustom.map((f) => {
+                    const idx = flatItems.findIndex((item) => item.isCustom && item.value === f)
+                    return (
+                      <div
+                        key={`custom-${f}`}
+                        className={`font-combo-item ${value === f ? 'font-combo-item--selected' : ''} ${idx === activeIdx ? 'font-combo-item--active' : ''}`}
+                        onMouseDown={(e) => { e.preventDefault(); handleSelect(f) }}
+                        onMouseEnter={() => setActiveIdx(idx)}
+                      >
+                        <span className="font-combo-item-text">{f}</span>
+                        <button
+                          className="font-combo-item-remove"
+                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveCustom(e, f) }}
+                          title="删除"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )
+                  })}
+                  {hasBuiltinSection && <div className="font-combo-divider" />}
+                </>
+              )}
+
+              {/* 内置字体区 */}
+              {hasBuiltinSection &&
+                filteredBuiltin.map((opt) => {
+                  const idx = flatItems.findIndex((item) => !item.isCustom && item.value === opt.value)
                   return (
                     <div
-                      key={`custom-${f}`}
-                      className={`font-combo-item ${value === f ? 'font-combo-item--selected' : ''} ${idx === activeIdx ? 'font-combo-item--active' : ''}`}
-                      onMouseDown={(e) => { e.preventDefault(); handleSelect(f) }}
+                      key={`builtin-${opt.value}`}
+                      className={`font-combo-item ${value === opt.value ? 'font-combo-item--selected' : ''} ${idx === activeIdx ? 'font-combo-item--active' : ''}`}
+                      onMouseDown={(e) => { e.preventDefault(); handleSelect(opt.value) }}
                       onMouseEnter={() => setActiveIdx(idx)}
                     >
-                      <span className="font-combo-item-text">{f}</span>
-                      <button
-                        className="font-combo-item-remove"
-                        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveCustom(e, f) }}
-                        title="删除"
-                      >
-                        ×
-                      </button>
+                      <span className="font-combo-item-text">{opt.label}</span>
                     </div>
                   )
                 })}
-                {hasBuiltinSection && <div className="font-combo-divider" />}
-              </>
-            )}
 
-            {/* 内置字体区 */}
-            {hasBuiltinSection &&
-              filteredBuiltin.map((opt) => {
-                const idx = flatItems.findIndex((item) => !item.isCustom && item.value === opt.value)
-                return (
-                  <div
-                    key={`builtin-${opt.value}`}
-                    className={`font-combo-item ${value === opt.value ? 'font-combo-item--selected' : ''} ${idx === activeIdx ? 'font-combo-item--active' : ''}`}
-                    onMouseDown={(e) => { e.preventDefault(); handleSelect(opt.value) }}
-                    onMouseEnter={() => setActiveIdx(idx)}
-                  >
-                    <span className="font-combo-item-text">{opt.label}</span>
-                  </div>
-                )
-              })}
-
-            {/* 输入新字体提示 */}
-            {noResults && (
-              <div className="font-combo-hint">
-                按 Enter 添加「{filter}」为自定义字体
-              </div>
-            )}
-          </div>
-        )}
+              {/* 输入新字体提示 */}
+              {noResults && (
+                <div className="font-combo-hint">
+                  按 Enter 添加「{filter}」为自定义字体
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <span className="settings-unit settings-unit--placeholder" aria-hidden="true" />
       </div>
     </label>
   )

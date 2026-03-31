@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { useDocumentConfig } from '../../contexts/useDocumentConfig'
 import { useCustomFonts } from '../../hooks/useCustomFonts'
 import {
@@ -18,14 +18,21 @@ interface SettingsModalProps {
   onClose: () => void
 }
 
+const INDENT_SELECT_OPTIONS = INDENT_OPTIONS.map((opt) => ({
+  ...opt,
+  label: String(opt.value),
+}))
+
 /** 通用 select 组件 */
 function SelectField({
   label,
+  unit,
   value,
   options,
   onChange,
 }: {
   label: string
+  unit?: string
   value: string | number
   options: { label: string; value: string | number }[]
   onChange: (val: string) => void
@@ -33,17 +40,25 @@ function SelectField({
   return (
     <label className="settings-field">
       <span className="settings-field-label">{label}</span>
-      <select
-        className="settings-select"
-        value={value}
-        onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
-      >
-        {options.map((opt) => (
-          <option key={`${opt.value}`} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <div className="settings-control-row">
+        <div className="settings-select-wrap settings-field-main">
+          <select
+            className="settings-select settings-select--custom"
+            value={value}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
+          >
+            {options.map((opt) => (
+              <option key={`${opt.value}`} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <span className="font-combo-arrow" />
+        </div>
+        <span className={`settings-unit ${unit ? '' : 'settings-unit--placeholder'}`}>
+          {unit}
+        </span>
+      </div>
     </label>
   )
 }
@@ -164,8 +179,8 @@ function NumberInputField({
   return (
     <label className="settings-field">
       <span className="settings-field-label">{label}</span>
-      <div className="settings-number-wrap">
-        <div className="font-combo" ref={wrapRef} style={{ flex: 1 }}>
+      <div className="settings-control-row">
+        <div className="font-combo settings-field-main" ref={wrapRef}>
           <div
             className="font-combo-input-wrap"
             onMouseDown={handleWrapMouseDown}
@@ -198,7 +213,7 @@ function NumberInputField({
                   onMouseDown={(e) => { e.preventDefault(); handleSelect(opt.value) }}
                   onMouseEnter={() => setActiveIdx(idx)}
                 >
-                  <span className="font-combo-item-text">{opt.label}</span>
+                  <span className="font-combo-item-text">{opt.value}</span>
                 </div>
               ))}
               {noResults && (
@@ -209,7 +224,9 @@ function NumberInputField({
             </div>
           )}
         </div>
-        {unit && <span className="settings-unit">{unit}</span>}
+        <span className={`settings-unit ${unit ? '' : 'settings-unit--placeholder'}`}>
+          {unit}
+        </span>
       </div>
     </label>
   )
@@ -221,7 +238,7 @@ function CheckboxField({
   checked,
   onChange,
 }: {
-  label: string
+  label: ReactNode
   checked: boolean
   onChange: (val: boolean) => void
 }) {
@@ -303,71 +320,72 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
         {/* 内容区 */}
         <div className="settings-body">
-          {/* 区块: 版头配置 */}
           <section className="settings-section">
-            <h3 className="settings-section-title">版头</h3>
-            <div className="settings-options">
-              <CheckboxField
-                label="启用版头"
-                checked={config.header.enabled}
-                onChange={(v) => patch({ header: { enabled: v } })}
-              />
-              {config.header.enabled && (
-                <div className="settings-grid settings-grid--3">
-                  <TextField
-                    label="发文机关标志"
-                    value={config.header.orgName}
-                    placeholder="如：国务院办公厅"
-                    onChange={(v) => patch({ header: { orgName: v } })}
+            <h3 className="settings-section-title">版头与版记</h3>
+            <div className="settings-dual-panels">
+              <div className="settings-panel">
+                <div className="settings-options">
+                  <CheckboxField
+                    label="启用版头"
+                    checked={config.header.enabled}
+                    onChange={(v) => patch({ header: { enabled: v } })}
                   />
-                  <TextField
-                    label="发文字号"
-                    value={config.header.docNumber}
-                    placeholder="如：国办发〔2024〕1号"
-                    onChange={(v) => patch({ header: { docNumber: v } })}
-                  />
-                  <TextField
-                    label="签发人"
-                    value={config.header.signer}
-                    placeholder="选填，上行文使用"
-                    onChange={(v) => patch({ header: { signer: v } })}
-                  />
+                  {config.header.enabled && (
+                    <div className="settings-panel-fields">
+                      <TextField
+                        label="发文机关标志"
+                        value={config.header.orgName}
+                        placeholder="如：国务院办公厅"
+                        onChange={(v) => patch({ header: { orgName: v } })}
+                      />
+                      <TextField
+                        label="发文字号"
+                        value={config.header.docNumber}
+                        placeholder="如：国办发〔2024〕1号"
+                        onChange={(v) => patch({ header: { docNumber: v } })}
+                      />
+                      <TextField
+                        label="签发人"
+                        value={config.header.signer}
+                        placeholder="选填，上行文使用"
+                        onChange={(v) => patch({ header: { signer: v } })}
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </section>
+              </div>
 
-          {/* 区块: 版记配置 */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">版记</h3>
-            <div className="settings-options">
-              <CheckboxField
-                label="启用版记"
-                checked={config.footerNote.enabled}
-                onChange={(v) => patch({ footerNote: { enabled: v } })}
-              />
-              {config.footerNote.enabled && (
-                <div className="settings-grid settings-grid--3">
-                  <TextField
-                    label="抄送"
-                    value={config.footerNote.cc}
-                    placeholder="抄送机关"
-                    onChange={(v) => patch({ footerNote: { cc: v } })}
+              <div className="settings-panel">
+                <div className="settings-options">
+                  <CheckboxField
+                    label="启用版记"
+                    checked={config.footerNote.enabled}
+                    onChange={(v) => patch({ footerNote: { enabled: v } })}
                   />
-                  <TextField
-                    label="印发机关"
-                    value={config.footerNote.printer}
-                    placeholder="如：国务院办公厅"
-                    onChange={(v) => patch({ footerNote: { printer: v } })}
-                  />
-                  <TextField
-                    label="印发日期"
-                    value={config.footerNote.printDate}
-                    placeholder="如：2024年1月1日"
-                    onChange={(v) => patch({ footerNote: { printDate: v } })}
-                  />
+                  {config.footerNote.enabled && (
+                    <div className="settings-panel-fields">
+                      <TextField
+                        label="抄送"
+                        value={config.footerNote.cc}
+                        placeholder="抄送机关"
+                        onChange={(v) => patch({ footerNote: { cc: v } })}
+                      />
+                      <TextField
+                        label="印发机关"
+                        value={config.footerNote.printer}
+                        placeholder="如：国务院办公厅"
+                        onChange={(v) => patch({ footerNote: { printer: v } })}
+                      />
+                      <TextField
+                        label="印发日期"
+                        value={config.footerNote.printDate}
+                        placeholder="如：2024年1月1日"
+                        onChange={(v) => patch({ footerNote: { printDate: v } })}
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </section>
 
@@ -504,7 +522,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               <SelectField
                 label="首行缩进"
                 value={config.body.firstLineIndent}
-                options={INDENT_OPTIONS}
+                unit="字符"
+                options={INDENT_SELECT_OPTIONS}
                 onChange={(v) => patch({ body: { firstLineIndent: Number(v) } })}
               />
             </div>
@@ -514,40 +533,50 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           {/* 区块 5: 特殊选项 */}
           <section className="settings-section">
             <h3 className="settings-section-title">特殊选项</h3>
-            <div className="settings-options">
-              <CheckboxField
-                label="正文段落首句加粗"
-                checked={config.specialOptions.boldFirstSentence}
-                onChange={(v) => patch({ specialOptions: { boldFirstSentence: v } })}
-              />
-              <CheckboxField
-                label="添加页码"
-                checked={config.specialOptions.showPageNumber}
-                onChange={(v) => patch({ specialOptions: { showPageNumber: v } })}
-              />
-              {config.specialOptions.showPageNumber && (
-                <div className="settings-sub-option">
-                  <FontSelectField
-                    label="页码字体"
-                    value={config.specialOptions.pageNumberFont}
-                    {...fontFieldProps}
-                    onChange={(v) => patch({ specialOptions: { pageNumberFont: v } })}
-                  />
-                </div>
-              )}
-              <CheckboxField
-                label="加盖印章（成文日期右空四字）"
-                checked={config.specialOptions.hasStamp}
-                onChange={(v) => patch({ specialOptions: { hasStamp: v } })}
-              />
-              <p className="settings-hint">
-                {config.specialOptions.hasStamp
-                  ? '加盖印章：成文日期右空四字，发文机关署名以成文日期为基准居中 (GB/T 9704 7.3.5.1)'
-                  : '不加盖印章：成文日期右空二字，发文机关署名以成文日期为基准居中 (GB/T 9704 7.3.5.2)'}
-              </p>
-              <p className="settings-hint">
-                发文机关署名自动识别：成文日期上一行、不超过15字、不以标点结尾的段落
-              </p>
+            <div className="settings-special-grid">
+              <div className="settings-special-card">
+                <CheckboxField
+                  label="正文段落首句加粗"
+                  checked={config.specialOptions.boldFirstSentence}
+                  onChange={(v) => patch({ specialOptions: { boldFirstSentence: v } })}
+                />
+              </div>
+
+              <div className="settings-special-card">
+                <CheckboxField
+                  label={(
+                    <>
+                      加盖印章
+                      <span
+                        className="font-tooltip-icon"
+                        title="成文日期右空四字，发文机关署名以成文日期为基准居中"
+                      >
+                        ?
+                      </span>
+                    </>
+                  )}
+                  checked={config.specialOptions.hasStamp}
+                  onChange={(v) => patch({ specialOptions: { hasStamp: v } })}
+                />
+              </div>
+
+              <div className="settings-special-card">
+                <CheckboxField
+                  label="添加页码"
+                  checked={config.specialOptions.showPageNumber}
+                  onChange={(v) => patch({ specialOptions: { showPageNumber: v } })}
+                />
+                {config.specialOptions.showPageNumber && (
+                  <div className="settings-special-card-body">
+                    <FontSelectField
+                      label="页码字体"
+                      value={config.specialOptions.pageNumberFont}
+                      {...fontFieldProps}
+                      onChange={(v) => patch({ specialOptions: { pageNumberFont: v } })}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </section>
 
@@ -558,16 +587,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               onClick={() => setShowAdvanced(!showAdvanced)}
             >
               <span>高级设置</span>
-              <span className={`settings-arrow ${showAdvanced ? 'settings-arrow--open' : ''}`}>
-                ▸
-              </span>
+              <span className={`settings-arrow ${showAdvanced ? 'settings-arrow--open' : ''}`} />
             </button>
             {showAdvanced && (
               <div className="settings-advanced">
                 <p className="settings-hint">按元素类型独立配置中文字体、英数字体和字号</p>
                 {(
                   [
-                    ['addressee', '主送机关'],
                     ['h1', '一级标题'],
                     ['h2', '二级标题'],
                     ['h3', '三级标题'],
