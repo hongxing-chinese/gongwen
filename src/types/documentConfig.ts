@@ -36,11 +36,14 @@ export interface BodyConfig {
 
 
 /** 特殊选项 */
+export type PageNumberStyle = 'mirrored' | 'center'
+
 export interface SpecialOptionsConfig {
   boldFirstSentence: boolean
   boldHeading3: boolean
   showPageNumber: boolean
   pageNumberFont: string
+  pageNumberStyle: PageNumberStyle
   /**
    * 是否加盖印章
    * - true: 成文日期右空四字 (GB/T 9704 7.3.5.1 加盖印章的公文)
@@ -131,6 +134,7 @@ export const DEFAULT_CONFIG: DocumentConfig = {
     boldHeading3: true,
     showPageNumber: true,
     pageNumberFont: '宋体',
+    pageNumberStyle: 'mirrored',
     hasStamp: false,
   },
   advanced: {
@@ -202,6 +206,11 @@ export const INDENT_OPTIONS: { label: string; value: number }[] = [
   { label: '1字符', value: 1 },
   { label: '2字符', value: 2 },
   { label: '3字符', value: 3 },
+]
+
+export const PAGE_NUMBER_STYLE_OPTIONS: { label: string; value: PageNumberStyle }[] = [
+  { label: '单右双左（国标）', value: 'mirrored' },
+  { label: '全居中', value: 'center' },
 ]
 
 // ---- 版式常量 (GB/T 9704) ----

@@ -160,6 +160,7 @@ export function Preview({ ast }: PreviewProps) {
             offsetY={slice.offsetY}
             clipHeight={slice.clipHeight}
             showPageNumber={deferredConfig.specialOptions.showPageNumber}
+            pageNumberStyle={deferredConfig.specialOptions.pageNumberStyle}
             boldFirstSentence={boldFirst}
             boldHeading3={boldHeading3}
             headerConfig={deferredConfig.header}

@@ -7,7 +7,7 @@ import {
 import type { IRunOptions, IBorderOptions } from 'docx'
 import type { GongwenAST, DocumentNode, AttachmentNode } from '../types/ast'
 import { NodeType } from '../types/ast'
-import type { DocumentConfig } from '../types/documentConfig'
+import type { DocumentConfig, PageNumberStyle } from '../types/documentConfig'
 import { cmToTwip, ptToTwip } from '../types/documentConfig'
 import {
   createCharacterFirstLineIndent,
@@ -43,9 +43,47 @@ const PAGE_NUM_DASH = '\u2014'
 /** 页码距版心下边缘 7mm (GB/T 9704)，通过 spacing.before 定位 */
 const PAGE_NUM_SPACING_BEFORE = cmToTwip(0.7) // 7mm = 0.7cm ≈ 397 twips
 
+type PageNumberAlignment = typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT | typeof AlignmentType.CENTER
+
+interface PageNumberParagraphOptions {
+  alignment: PageNumberAlignment
+  indent: { left?: number; right?: number }
+}
+
+export function getPageNumberParagraphOptions(
+  pageNumberStyle: PageNumberStyle,
+  pageNumIndent: number,
+): {
+  evenAndOddHeaderAndFooters: boolean
+  defaultOptions: PageNumberParagraphOptions
+  evenOptions?: PageNumberParagraphOptions
+} {
+  if (pageNumberStyle === 'center') {
+    return {
+      evenAndOddHeaderAndFooters: false,
+      defaultOptions: {
+        alignment: AlignmentType.CENTER,
+        indent: {},
+      },
+    }
+  }
+
+  return {
+    evenAndOddHeaderAndFooters: true,
+    defaultOptions: {
+      alignment: AlignmentType.RIGHT,
+      indent: { right: pageNumIndent },
+    },
+    evenOptions: {
+      alignment: AlignmentType.LEFT,
+      indent: { left: pageNumIndent },
+    },
+  }
+}
+
 /** 构建页码段落 */
 function pageNumberParagraph(
-  alignment: typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT,
+  alignment: PageNumberAlignment,
   indent: { left?: number; right?: number },
   pageNumFont: Record<string, string>,
   pageNumSize: number,
@@ -540,22 +578,41 @@ export function buildDocument(ast: GongwenAST, config: DocumentConfig): Document
   const pageNumSize = 28 // 四号 14pt
   // 奇偶页各空一字（四号字 14pt = 280 twips）
   const pageNumIndent = ptToTwip(14)
+  const pageNumberOptions = getPageNumberParagraphOptions(config.specialOptions.pageNumberStyle, pageNumIndent)
 
-  // 页脚配置：单页码居右空一字，双页码居左空一字
+  // 页脚配置：默认国标单右双左，也支持全居中
   const footers = config.specialOptions.showPageNumber
     ? {
         default: new Footer({
-          children: [pageNumberParagraph(AlignmentType.RIGHT, { right: pageNumIndent }, pageNumFont, pageNumSize)],
+          children: [
+            pageNumberParagraph(
+              pageNumberOptions.defaultOptions.alignment,
+              pageNumberOptions.defaultOptions.indent,
+              pageNumFont,
+              pageNumSize,
+            ),
+          ],
         }),
-        even: new Footer({
-          children: [pageNumberParagraph(AlignmentType.LEFT, { left: pageNumIndent }, pageNumFont, pageNumSize)],
-        }),
+        ...(pageNumberOptions.evenOptions
+          ? {
+              even: new Footer({
+                children: [
+                  pageNumberParagraph(
+                    pageNumberOptions.evenOptions.alignment,
+                    pageNumberOptions.evenOptions.indent,
+                    pageNumFont,
+                    pageNumSize,
+                  ),
+                ],
+              }),
+            }
+          : {}),
       }
     : undefined
 
   return new Document({
-    // 启用奇偶页不同页脚（单页码居右，双页码居左）
-    evenAndOddHeaderAndFooters: config.specialOptions.showPageNumber,
+    // 国标样式启用奇偶页不同页脚；全居中时关闭
+    evenAndOddHeaderAndFooters: config.specialOptions.showPageNumber && pageNumberOptions.evenAndOddHeaderAndFooters,
     sections: [
       {
         properties: {

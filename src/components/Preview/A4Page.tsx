@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import type { DocumentNode } from '../../types/ast'
-import type { HeaderConfig, FooterNoteConfig } from '../../types/documentConfig'
+import type { FooterNoteConfig, HeaderConfig, PageNumberStyle } from '../../types/documentConfig'
 import { DocumentFlow } from './DocumentFlow'
 import './A4Page.css'
 
@@ -14,6 +14,8 @@ interface A4PageProps {
   clipHeight: number
   /** 是否显示页码 */
   showPageNumber: boolean
+  /** 页码样式 */
+  pageNumberStyle: PageNumberStyle
   /** 是否对正文首句加粗 */
   boldFirstSentence: boolean
   /** 是否对三级标题加粗 */
@@ -41,6 +43,7 @@ export const A4Page = memo(function A4Page({
   offsetY,
   clipHeight,
   showPageNumber,
+  pageNumberStyle,
   boldFirstSentence,
   boldHeading3,
   headerConfig,
@@ -98,7 +101,7 @@ export const A4Page = memo(function A4Page({
         </div>
       )}
       {showPageNumber && (
-        <div className={`a4-footer ${pageNumber % 2 === 0 ? 'a4-footer-even' : 'a4-footer-odd'}`}>
+        <div className={`a4-footer ${pageNumberStyle === 'center' ? 'a4-footer-center' : pageNumber % 2 === 0 ? 'a4-footer-even' : 'a4-footer-odd'}`}>
           — {pageNumber} —
         </div>
       )}

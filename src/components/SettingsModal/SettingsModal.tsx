@@ -7,8 +7,10 @@ import {
   FONT_SIZE_OPTIONS,
   LINE_SPACING_OPTIONS,
   INDENT_OPTIONS,
+  PAGE_NUMBER_STYLE_OPTIONS,
   type DeepPartial,
   type DocumentConfig,
+  type PageNumberStyle,
 } from '../../types/documentConfig'
 import { FontSelectField } from './FontSelectField'
 import { useComboBox } from './useComboBox'
@@ -581,6 +583,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                       value={config.specialOptions.pageNumberFont}
                       {...fontFieldProps}
                       onChange={(v) => patch({ specialOptions: { pageNumberFont: v } })}
+                    />
+                    <SelectField
+                      label="页码样式"
+                      value={config.specialOptions.pageNumberStyle}
+                      options={PAGE_NUMBER_STYLE_OPTIONS}
+                      onChange={(v) => patch({ specialOptions: { pageNumberStyle: v as PageNumberStyle } })}
                     />
                   </div>
                 )}

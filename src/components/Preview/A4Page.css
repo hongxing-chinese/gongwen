@@ -276,6 +276,10 @@
   text-align: left;
 }
 
+.a4-footer-center {
+  text-align: center;
+}
+
 /* 首句加粗样式 */
 .a4-bold-first {
   font-weight: bold;
